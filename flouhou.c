@@ -97,7 +97,7 @@ typedef struct {
     int invincibility_frames_left; // == 0 means player is vincible
 } Player;
 
-typedef struct {
+typedef struct { // position of enemy is a function of time, so it's not stored.
     int hit_cooldown_ticks_left; // the amount of ticks the enemy is invisible after being hit
     int shoot_cooldown_left;
     int hits_taken;
@@ -110,7 +110,7 @@ typedef struct {
     Player player;
     Enemy enemy;
     bool paused;
-    bool should_quit; // Communicate to event_loop that the game should close
+    bool should_quit; // Communicate to event loop that the game should close
 } GameState;
 
 // typedef struct {
@@ -154,7 +154,7 @@ int hits_to_shootcooldown(int hits) {
 /// Calculate the speed of enemy pews from the amount of this the enemy has
 /// taken
 float hits_to_enemy_pew_speed(int hits) {
-    return powf(1 / ENEMY_COOLDOWN_RETENTION_PER_HIT, (float)hits);
+    return pow(1 / ENEMY_COOLDOWN_RETENTION_PER_HIT, (double)hits);
 }
 
 /// Draw stars
@@ -198,7 +198,7 @@ void draw_enemy(Canvas* canvas, const GameState* game_state) {
     uint8_t x = p.x;
     uint8_t y = p.y;
     bool invert_color_for_flicker_animation = game_state->enemy.hit_cooldown_ticks_left % 2 == 0;
-    if(invert_color_for_flicker_animation) {
+    if (invert_color_for_flicker_animation) {
         canvas_invert_color(canvas);
     }
     canvas_draw_icon(canvas, x - 1, y, &I_BadFill_16x16);
@@ -207,7 +207,7 @@ void draw_enemy(Canvas* canvas, const GameState* game_state) {
     canvas_draw_icon(canvas, x + 1, y, &I_BadFill_16x16);
     canvas_invert_color(canvas);
     // make enemy laugh when player died
-    if(game_state->player.lifes_left == 0) {
+    if (game_state->player.lifes_left == 0) {
         canvas_draw_icon(
             canvas, x, y, game_state->ticks % 16 > 8 ? &I_BadLaugh0_16x16 : &I_BadLaugh1_16x16);
     } else {
@@ -215,7 +215,7 @@ void draw_enemy(Canvas* canvas, const GameState* game_state) {
             canvas, x, y, game_state->ticks % 48 > 24 ? &I_Bad0_16x16 : &I_Bad1_16x16);
     }
     canvas_invert_color(canvas);
-    if(invert_color_for_flicker_animation) {
+    if (invert_color_for_flicker_animation) {
         canvas_invert_color(canvas);
     }
 }
@@ -223,19 +223,19 @@ void draw_enemy(Canvas* canvas, const GameState* game_state) {
 void draw_player_death(Canvas* canvas, const GameState* game_state, int ticks_sice_death) {
     // draw explosion
     canvas_set_color(canvas, ColorWhite);
-    if(ticks_sice_death == 0) {
+    if (ticks_sice_death == 0) {
         canvas_draw_disc(canvas, game_state->player.x + 3, game_state->player.y + 4, 8);
     } else if(ticks_sice_death == 1) {
         canvas_draw_disc(canvas, game_state->player.x + 3, game_state->player.y + 4, 12);
-    } else if(ticks_sice_death == 2) {
+    } else if (ticks_sice_death == 2) {
         canvas_draw_disc(canvas, game_state->player.x + 3, game_state->player.y + 4, 14);
         canvas_set_color(canvas, ColorBlack);
         canvas_draw_disc(canvas, game_state->player.x + 3, game_state->player.y + 4, 8);
-    } else if(ticks_sice_death == 3) {
+    } else if (ticks_sice_death == 3) {
         canvas_draw_disc(canvas, game_state->player.x + 3, game_state->player.y + 4, 15);
         canvas_set_color(canvas, ColorBlack);
         canvas_draw_disc(canvas, game_state->player.x + 3, game_state->player.y + 4, 13);
-    } else if(ticks_sice_death == 4) {
+    } else if (ticks_sice_death == 4) {
         canvas_draw_disc(canvas, game_state->player.x + 3, game_state->player.y + 4, 16);
         canvas_set_color(canvas, ColorBlack);
         canvas_draw_disc(canvas, game_state->player.x + 3, game_state->player.y + 4, 15);
@@ -245,6 +245,14 @@ void draw_player_death(Canvas* canvas, const GameState* game_state, int ticks_si
 
 void draw_pause_screen(Canvas* canvas) {
     (void)canvas;
+    // canvas_draw_box(canvas, 32, 8, 128 - 2 * 32, 64 - 2 * 8);
+    canvas_set_color(canvas, ColorWhite);
+    canvas_draw_box(canvas, 24, 14, 128 -  2 * 24, 72 - 2 * 16);
+    canvas_set_color(canvas, ColorBlack);
+    canvas_draw_frame(canvas, 25, 15, 126 -  2 * 24, 70 - 2 * 16);
+    canvas_draw_str(canvas, 48, 26, "Paused\nBack -> Quit\nShoot -> Resume");
+    canvas_draw_str(canvas, 30, 39, "Back  -> Quit");
+    canvas_draw_str(canvas, 28, 48, "Shoot -> Resume");
 }
 
 bool check_collision(Rect a, Rect b) {
@@ -277,7 +285,7 @@ GameState init_game_state() {
 
 static void my_draw_callback(Canvas* canvas, void* context) {
     const GameState* game_state = context;
-    if(canvas == NULL) {
+    if (canvas == NULL) {
         return;
     }
     canvas_set_bitmap_mode(canvas, true);
@@ -295,9 +303,9 @@ static void my_draw_callback(Canvas* canvas, void* context) {
     }
     canvas_invert_color(canvas);
     // draw spaceship
-    if(game_state->player.lifes_left != 0) {
+    if (game_state->player.lifes_left != 0) {
         canvas_invert_color(canvas);
-        if(game_state->player.invincibility_frames_left % 2 == 0) {
+        if (game_state->player.invincibility_frames_left % 2 == 0) {
             draw_outlined_icon(
                 canvas,
                 (uint8_t)game_state->player.x,
@@ -325,8 +333,6 @@ static void my_draw_callback(Canvas* canvas, void* context) {
     char hit_string[32] = {0};
     snprintf(hit_string, sizeof(hit_string), "hits: %i", game_state->enemy.hits_taken);
     draw_outlined_str(canvas, 80, 10, hit_string);
-    char cringe_string[64] = {0};
-    draw_outlined_str(canvas, 80, 30, cringe_string);
     // display lifes left as hearts
     canvas_invert_color(canvas);
     for(int i = 0; i < game_state->player.lifes_left; i++) {
@@ -337,7 +343,7 @@ static void my_draw_callback(Canvas* canvas, void* context) {
 
 static void my_input_callback(InputEvent* inputevent, void* context) {
     FuriMessageQueue** queue = context;
-    if(inputevent == NULL) {
+    if (inputevent == NULL) {
         return;
     }
     FouQueueEventInput event_input = {0};
@@ -370,7 +376,7 @@ static void my_input_callback(InputEvent* inputevent, void* context) {
         no_input = true;
     } break;
     };
-    if(!no_input) {
+    if (!no_input) {
         FouQueueEvent event = {.kind = FOU_QUEUEEVENTKIND_INPUT, .input = event_input};
         furi_message_queue_put(*queue, &event, FuriWaitForever);
     }
@@ -408,35 +414,35 @@ void do_tick(
     }
 
     // Change player ship velocity based on input
-    if(game_state->player.lifes_left != 0) {
-        if(current_frame_input.up) game_state->player.v_speed -= MOVEMENT_SPEED;
-        if(current_frame_input.down) game_state->player.v_speed += MOVEMENT_SPEED;
-        if(current_frame_input.left) game_state->player.h_speed -= MOVEMENT_SPEED;
-        if(current_frame_input.right) game_state->player.h_speed += MOVEMENT_SPEED;
+    if (game_state->player.lifes_left != 0) {
+        if (current_frame_input.up) game_state->player.v_speed -= MOVEMENT_SPEED;
+        if (current_frame_input.down) game_state->player.v_speed += MOVEMENT_SPEED;
+        if (current_frame_input.left) game_state->player.h_speed -= MOVEMENT_SPEED;
+        if (current_frame_input.right) game_state->player.h_speed += MOVEMENT_SPEED;
         // make player shoot on input
-        if(current_frame_input.shoot && game_state->player.shoot_cooldown_left == 0) {
+        if (current_frame_input.shoot && game_state->player.shoot_cooldown_left == 0) {
             pew_add(
                 &(game_state->pews), (Pew){.x = game_state->player.x, .y = game_state->player.y});
             game_state->player.shoot_cooldown_left = SHOOT_COOLDOWN;
         }
         //
-        if(game_state->player.shoot_cooldown_left != 0) {
+        if (game_state->player.shoot_cooldown_left != 0) {
             game_state->player.shoot_cooldown_left--;
         }
     }
     // Bounds checking for player shots
     for(int i = game_state->pews.len - 1; i >= 0; i--) {
         game_state->pews.items[i].x += 4;
-        if(game_state->pews.items[i].x > 128) {
+        if (game_state->pews.items[i].x > 128) {
             pew_remove(&game_state->pews, i);
         }
     }
     // Detect collision of projectiles with enemy
     Position enemy_position = calculate_bad_position(game_state->ticks);
-    if(game_state->enemy.hit_cooldown_ticks_left == 0) {
+    if (game_state->enemy.hit_cooldown_ticks_left == 0) {
         for(int i = game_state->pews.len - 1; i >= 0; i--) {
             Pew pew = game_state->pews.items[i];
-            if(check_collision(
+            if (check_collision(
                    (Rect){.x = pew.x, .y = pew.y, .w = PLAYER_PEW_WIDTH, .h = PLAYER_PEW_HEIGHT},
                    (Rect){
                        .x = enemy_position.x,
@@ -456,18 +462,18 @@ void do_tick(
         EnemyPew* epew = &game_state->enemy_pews.items[i];
         epew->x += epew->h_speed;
         epew->y += epew->v_speed;
-        if(epew->x < 0 - ENEMY_PEW_WIDTH || epew->y < 0 - ENEMY_PEW_HEIGHT || epew->x > 128 ||
+        if (epew->x < 0 - ENEMY_PEW_WIDTH || epew->y < 0 - ENEMY_PEW_HEIGHT || epew->x > 128 ||
            epew->y > 64) {
             enemypew_remove(&game_state->enemy_pews, i);
         }
     }
-    if(game_state->player.lifes_left != 0) {
+    if (game_state->player.lifes_left != 0) {
         // check collision with enemy projectile and player
-        if(game_state->player.invincibility_frames_left == 0) {
+        if (game_state->player.invincibility_frames_left == 0) {
             bool has_been_hit = false;
             for(int i = 0; i < game_state->enemy_pews.len; i++) {
                 EnemyPew epew = game_state->enemy_pews.items[i];
-                if(check_collision(
+                if (check_collision(
                    (Rect){
                         .x = game_state->player.x,
                         .y = game_state->player.y,
@@ -483,7 +489,7 @@ void do_tick(
                 }
             }
             // check collision with player and enemy
-            if(!has_been_hit && check_collision(
+            if (!has_been_hit && check_collision(
                                     (Rect){
                                         .x = game_state->player.x,
                                         .y = game_state->player.y,
@@ -496,7 +502,7 @@ void do_tick(
                                         .h = ENEMY_HEIGHT})) {
                 has_been_hit = true;
             }
-            if(has_been_hit) {
+            if (has_been_hit) {
                 game_state->player.lifes_left--;
                 game_state->player.invincibility_frames_left = PLAYER_INVINCIBILITY_FRAMES;
             }
@@ -504,7 +510,7 @@ void do_tick(
             game_state->player.invincibility_frames_left--;
         }
         // make enemy shoot
-        if(game_state->enemy.shoot_cooldown_left == 0) {
+        if (game_state->enemy.shoot_cooldown_left == 0) {
             game_state->enemy.shoot_cooldown_left =
                 hits_to_shootcooldown(game_state->enemy.hits_taken);
             // figure out velocity vector from enemy to player space ship:
@@ -526,7 +532,7 @@ void do_tick(
             game_state->enemy.shoot_cooldown_left--;
         }
     } else {
-        if(game_state->player.ticks_since_death == 64) {
+        if (game_state->player.ticks_since_death == 64) {
             *game_state = init_game_state();
             return;
         }
@@ -538,17 +544,17 @@ void do_tick(
     game_state->player.h_speed *= PLAYER_SPEED_RETENTION;
     game_state->player.v_speed *= PLAYER_SPEED_RETENTION;
     // spaceship bounds checking
-    if(game_state->player.y > 64) {
+    if (game_state->player.y > 64) {
         game_state->player.y -= 64;
     }
-    if(game_state->player.y < 0) {
+    if (game_state->player.y < 0) {
         game_state->player.y += 64;
     }
-    if(game_state->player.x < 0) {
+    if (game_state->player.x < 0) {
         game_state->player.x = 0;
         game_state->player.h_speed = 0;
     }
-    if(game_state->player.x > 128 - PLAYER_WIDTH /* player_width */) {
+    if (game_state->player.x > 128 - PLAYER_WIDTH /* player_width */) {
         game_state->player.h_speed = 0;
         game_state->player.x = 128 - PLAYER_WIDTH;
     }
@@ -558,7 +564,7 @@ void do_tick(
 int32_t flouhou_app(void* p) {
     (void)(p);
     GameState game_state = init_game_state();
-    FuriMessageQueue* queue = furi_message_queue_alloc(16, sizeof(FouQueueEvent));
+    FuriMessageQueue* queue = furi_message_queue_alloc(128, sizeof(FouQueueEvent));
     ViewPort* my_view_port = view_port_alloc();
 
     FuriTimer* timer = furi_timer_alloc(my_timer_callback, FuriTimerTypePeriodic, (void*)&queue);
@@ -580,7 +586,7 @@ int32_t flouhou_app(void* p) {
     bool should_quit = false;
     while(!should_quit) {
         FuriStatus status = furi_message_queue_get(queue, &event, FuriWaitForever);
-        if(status != FuriStatusOk) {
+        if (status != FuriStatusOk) {
             break;
         }
 
