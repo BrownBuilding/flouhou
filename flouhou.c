@@ -147,7 +147,7 @@ Position calculate_bad_position(float ticks) {
 
 /// Calcutate the the shoot cooldown of the enemy from the amount of hits it
 /// has tacken.
-int hits_to_shootcooldown(int hits) {
+int hits_to_enemy_shootcooldown(int hits) {
     return (int)(24 * pow(ENEMY_COOLDOWN_RETENTION_PER_HIT, (double)hits));
 }
 
@@ -265,7 +265,7 @@ GameState init_game_state() {
         .pews = {0},
         .enemy =
             {.hit_cooldown_ticks_left = 0,
-             .shoot_cooldown_left = ENEMY_SHOOT_COOLDOWN,
+             .shoot_cooldown_left = hits_to_enemy_shootcooldown(0),
              .hits_taken = 0},
         .enemy_pews = {0},
         .player = {
@@ -512,11 +512,11 @@ void do_tick(
         // make enemy shoot
         if (game_state->enemy.shoot_cooldown_left == 0) {
             game_state->enemy.shoot_cooldown_left =
-                hits_to_shootcooldown(game_state->enemy.hits_taken);
+                hits_to_enemy_shootcooldown(game_state->enemy.hits_taken);
             // figure out velocity vector from enemy to player space ship:
             float h_speed = game_state->player.x - enemy_position.x;
             float v_speed = game_state->player.y - enemy_position.y;
-            float magnitude = sqrtf(h_speed * h_speed + v_speed * v_speed);
+            float magnitude = sqrt((double)(h_speed * h_speed + v_speed * v_speed));
             float speed = hits_to_enemy_pew_speed(game_state->enemy.hits_taken);
             h_speed = speed * (h_speed / magnitude);
             v_speed = speed * (v_speed / magnitude);
@@ -563,8 +563,14 @@ void do_tick(
 
 int32_t flouhou_app(void* p) {
     (void)(p);
-    GameState game_state = init_game_state();
-    FuriMessageQueue* queue = furi_message_queue_alloc(128, sizeof(FouQueueEvent));
+
+    // I think the game state struct is too big for the stack so now it lives on
+    // the head.
+    GameState* game_state = malloc(sizeof(GameState));
+    assert(game_state);
+    *game_state = init_game_state();
+
+    FuriMessageQueue* queue = furi_message_queue_alloc(16, sizeof(FouQueueEvent));
     ViewPort* my_view_port = view_port_alloc();
 
     FuriTimer* timer = furi_timer_alloc(my_timer_callback, FuriTimerTypePeriodic, (void*)&queue);
@@ -572,7 +578,7 @@ int32_t flouhou_app(void* p) {
     // uint32_t tick_phase = furi_ms_to_ticks(16);
     furi_timer_start(timer, tick_phase);
 
-    view_port_draw_callback_set(my_view_port, my_draw_callback, (void*)&game_state);
+    view_port_draw_callback_set(my_view_port, my_draw_callback, (void*)game_state);
     view_port_input_callback_set(my_view_port, my_input_callback, (void*)&queue);
 
     Gui* gui = furi_record_open(RECORD_GUI);
@@ -592,8 +598,8 @@ int32_t flouhou_app(void* p) {
 
         switch(event.kind) {
         case FOU_QUEUEEVENTKIND_TICK: {
-            do_tick(&game_state, current_frame_input, previous_frame_input);
-            if (game_state.should_quit) {
+            do_tick(game_state, current_frame_input, previous_frame_input);
+            if (game_state->should_quit) {
                 should_quit = true;
             }
             previous_frame_input = current_frame_input;
@@ -609,6 +615,16 @@ int32_t flouhou_app(void* p) {
         } break;
 
         case FOU_QUEUEEVENTKIND_INPUT: {
+            // We could simply mark each button as 'pressed' or 'not pressed'
+            // as soon as the user presses or releases the button. But that
+            // means that if the user presses and releases the same button
+            // within a single frame, that button wouldn't be registered as
+            // being pressed at all.
+            // That is why every button will be marked as pressed when it is
+            // pressed. But as soon as it is released it is marked to be 'unset
+            // as pressed'.
+            // After the next tick, when a button is makred as being 'unset as
+            // pressed', its pressed status will be set to false.
             switch(event.input.user_input) {
             case FOU_USERINPUT_UP: {
                 if (!event.input.pressed) {
@@ -657,6 +673,7 @@ int32_t flouhou_app(void* p) {
         }
      }
 
+    free(game_state);
     furi_message_queue_free(queue);
 
     furi_timer_stop(timer);
