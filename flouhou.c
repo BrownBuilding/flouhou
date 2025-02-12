@@ -38,7 +38,7 @@
 #define ENEMY_PEW_HEIGHT 8
 
 #define PLAYER_SPEED_RETENTION 0.95
-#define MOVEMENT_SPEED 1
+#define MOVEMENT_SPEED 0.5
 #define SHOOT_COOLDOWN 8
 
 // TODO: Imporve death animation (explosion)
@@ -62,12 +62,12 @@ typedef enum {
 } FouQueueEventKind;
 
 typedef enum {
-    USER_INPUT_UP,
-    USER_INPUT_DOWN,
-    USER_INPUT_LEFT,
-    USER_INPUT_RIGHT,
-    USER_INPUT_QUIT,
-    USER_INPUT_SHOOT,
+    FOU_USERINPUT_UP,
+    FOU_USERINPUT_DOWN,
+    FOU_USERINPUT_LEFT,
+    FOU_USERINPUT_RIGHT,
+    FOU_USERINPUT_BACK,
+    FOU_USERINPUT_SHOOT,
 } UserInput;
 
 typedef struct {
@@ -75,6 +75,7 @@ typedef struct {
 
 typedef struct {
     UserInput user_input;
+    bool pressed; // true on press, false on release
 } FouQueueEventInput;
 
 typedef struct {
@@ -108,6 +109,8 @@ typedef struct {
     EnemyPews enemy_pews;
     Player player;
     Enemy enemy;
+    bool paused;
+    bool should_quit; // Communicate to event_loop that the game should close
 } GameState;
 
 // typedef struct {
@@ -116,11 +119,12 @@ typedef struct {
 // } GameStateAndMsgQueue;
 
 typedef struct {
-    bool should_up;
-    bool should_down;
-    bool should_left;
-    bool should_right;
-    bool should_shoot;
+    bool up;
+    bool down;
+    bool left;
+    bool right;
+    bool shoot;
+    bool back;
 } UserInputState;
 
 float map(float src_min, float src_max, float dst_min, float dst_max, float x) {
@@ -239,6 +243,10 @@ void draw_player_death(Canvas* canvas, const GameState* game_state, int ticks_si
     canvas_set_color(canvas, ColorBlack);
 }
 
+void draw_pause_screen(Canvas* canvas) {
+    (void)canvas;
+}
+
 bool check_collision(Rect a, Rect b) {
     return (a.x + a.w) > b.x && a.x < (b.x + b.w) && (a.y + a.h) > b.y && a.y < (b.y + b.h);
 }
@@ -261,7 +269,10 @@ GameState init_game_state() {
             .lifes_left = 3,
             .ticks_since_death = 0,
             .invincibility_frames_left = 0,
-        }};
+        },
+        .paused = false,
+        .should_quit = false,
+    };
 }
 
 static void my_draw_callback(Canvas* canvas, void* context) {
@@ -273,6 +284,10 @@ static void my_draw_callback(Canvas* canvas, void* context) {
     canvas_draw_box(canvas, 0, 0, 128, 64);
     canvas_invert_color(canvas);
     draw_stars(canvas, game_state->ticks);
+    if (game_state->paused) {
+        draw_pause_screen(canvas);
+        return;
+    }
     // draw shots
     for(int i = 0; i < game_state->pews.len; i++) {
         Pew pew = game_state->pews.items[i];
@@ -310,6 +325,8 @@ static void my_draw_callback(Canvas* canvas, void* context) {
     char hit_string[32] = {0};
     snprintf(hit_string, sizeof(hit_string), "hits: %i", game_state->enemy.hits_taken);
     draw_outlined_str(canvas, 80, 10, hit_string);
+    char cringe_string[64] = {0};
+    draw_outlined_str(canvas, 80, 30, cringe_string);
     // display lifes left as hearts
     canvas_invert_color(canvas);
     for(int i = 0; i < game_state->player.lifes_left; i++) {
@@ -324,25 +341,30 @@ static void my_input_callback(InputEvent* inputevent, void* context) {
         return;
     }
     FouQueueEventInput event_input = {0};
+    if (inputevent->type == InputTypeRelease) {
+        event_input.pressed = false;
+    } else {
+        event_input.pressed = true;
+    }
     bool no_input = false;
     switch(inputevent->key) {
     case InputKeyUp: {
-        event_input.user_input = USER_INPUT_UP;
+        event_input.user_input = FOU_USERINPUT_UP;
     } break;
     case InputKeyDown: {
-        event_input.user_input = USER_INPUT_DOWN;
+        event_input.user_input = FOU_USERINPUT_DOWN;
     } break;
     case InputKeyRight: {
-        event_input.user_input = USER_INPUT_RIGHT;
+        event_input.user_input = FOU_USERINPUT_RIGHT;
     } break;
     case InputKeyLeft: {
-        event_input.user_input = USER_INPUT_LEFT;
+        event_input.user_input = FOU_USERINPUT_LEFT;
     } break;
     case InputKeyBack: {
-        event_input.user_input = USER_INPUT_QUIT;
+        event_input.user_input = FOU_USERINPUT_BACK;
     } break;
     case InputKeyOk: {
-        event_input.user_input = USER_INPUT_SHOOT;
+        event_input.user_input = FOU_USERINPUT_SHOOT;
     } break;
     default: {
         no_input = true;
@@ -363,15 +385,36 @@ static void my_timer_callback(void* context) {
     furi_message_queue_put(*msg_queue, &event, FuriWaitForever);
 };
 
-void do_tick(GameState* game_state, UserInputState input_state) {
+
+void do_tick(
+    GameState* game_state,
+    UserInputState current_frame_input,
+    UserInputState prev_frame_input)
+{
+    (void)prev_frame_input;
+
+    if (game_state->paused) {
+        if (current_frame_input.back && !prev_frame_input.back) {
+            game_state->should_quit = true;
+        }
+        if (current_frame_input.shoot) {
+            game_state->paused = false;
+        }
+        return;
+    }
+
+    if (current_frame_input.back) {
+        game_state->paused = true;
+    }
+
     // Change player ship velocity based on input
     if(game_state->player.lifes_left != 0) {
-        if(input_state.should_up) game_state->player.v_speed -= MOVEMENT_SPEED;
-        if(input_state.should_down) game_state->player.v_speed += MOVEMENT_SPEED;
-        if(input_state.should_left) game_state->player.h_speed -= MOVEMENT_SPEED;
-        if(input_state.should_right) game_state->player.h_speed += MOVEMENT_SPEED;
+        if(current_frame_input.up) game_state->player.v_speed -= MOVEMENT_SPEED;
+        if(current_frame_input.down) game_state->player.v_speed += MOVEMENT_SPEED;
+        if(current_frame_input.left) game_state->player.h_speed -= MOVEMENT_SPEED;
+        if(current_frame_input.right) game_state->player.h_speed += MOVEMENT_SPEED;
         // make player shoot on input
-        if(input_state.should_shoot && game_state->player.shoot_cooldown_left == 0) {
+        if(current_frame_input.shoot && game_state->player.shoot_cooldown_left == 0) {
             pew_add(
                 &(game_state->pews), (Pew){.x = game_state->player.x, .y = game_state->player.y});
             game_state->player.shoot_cooldown_left = SHOOT_COOLDOWN;
@@ -529,47 +572,84 @@ int32_t flouhou_app(void* p) {
     Gui* gui = furi_record_open(RECORD_GUI);
     gui_add_view_port(gui, my_view_port, GuiLayerFullscreen);
 
-    UserInputState user_input = {0};
+    UserInputState current_frame_input = {0};
+    UserInputState previous_frame_input = {0};
+    UserInputState released_keys = {0};
 
     FouQueueEvent event;
     bool should_quit = false;
     while(!should_quit) {
         FuriStatus status = furi_message_queue_get(queue, &event, FuriWaitForever);
-        if(status == FuriStatusOk) {
-            switch(event.kind) {
-            case FOU_QUEUEEVENTKIND_TICK: {
-                do_tick(&game_state, user_input);
-                user_input = (UserInputState){0};
-                view_port_update(my_view_port);
-            } break;
+        if(status != FuriStatusOk) {
+            break;
+        }
 
-            case FOU_QUEUEEVENTKIND_INPUT: {
-                switch(event.input.user_input) {
-                case USER_INPUT_UP: {
-                    user_input.should_up = true;
-                } break;
-                case USER_INPUT_DOWN: {
-                    user_input.should_down = true;
-                } break;
-                case USER_INPUT_LEFT: {
-                    user_input.should_left = true;
-                } break;
-                case USER_INPUT_RIGHT: {
-                    user_input.should_right = true;
-                } break;
-                case USER_INPUT_QUIT: {
-                    should_quit = true;
-                } break;
-                case USER_INPUT_SHOOT: {
-                    user_input.should_shoot = true;
-                } break;
+        switch(event.kind) {
+        case FOU_QUEUEEVENTKIND_TICK: {
+            do_tick(&game_state, current_frame_input, previous_frame_input);
+            if (game_state.should_quit) {
+                should_quit = true;
+            }
+            previous_frame_input = current_frame_input;
+            if (released_keys.up) current_frame_input.up = false;
+            if (released_keys.down) current_frame_input.down = false;
+            if (released_keys.left) current_frame_input.left = false;
+            if (released_keys.right) current_frame_input.right = false;
+            if (released_keys.back) current_frame_input.back = false;
+            if (released_keys.shoot) current_frame_input.shoot = false;
+            released_keys = (UserInputState){0};
+            // current_frame_input = (UserInputState){0};
+            view_port_update(my_view_port);
+        } break;
+
+        case FOU_QUEUEEVENTKIND_INPUT: {
+            switch(event.input.user_input) {
+            case FOU_USERINPUT_UP: {
+                if (!event.input.pressed) {
+                    released_keys.up = true;
+                } else {
+                    current_frame_input.up = true;
+                }
+            } break;
+            case FOU_USERINPUT_DOWN: {
+                if (!event.input.pressed) {
+                    released_keys.down = true;
+                } else {
+                    current_frame_input.down = true;
+                }
+            } break;
+            case FOU_USERINPUT_LEFT: {
+                if (!event.input.pressed) {
+                    released_keys.left = true;
+                } else {
+                    current_frame_input.left = true;
+                }
+            } break;
+            case FOU_USERINPUT_RIGHT: {
+                if (!event.input.pressed) {
+                    released_keys.right = true;
+                } else {
+                    current_frame_input.right = true;
+                }
+            } break;
+            case FOU_USERINPUT_BACK: {
+                if (!event.input.pressed) {
+                    released_keys.back = true;
+                } else {
+                    current_frame_input.back = true;
+                }
+            } break;
+            case FOU_USERINPUT_SHOOT: {
+                if (!event.input.pressed) {
+                    released_keys.shoot = true;
+                } else {
+                    current_frame_input.shoot = true;
                 }
             } break;
             }
-        } else {
-            should_quit = true;
+        } break;
         }
-    }
+     }
 
     furi_message_queue_free(queue);
 
