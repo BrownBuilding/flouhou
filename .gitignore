@@ -1,0 +1,11 @@
+dist/*
+.vscode
+.clang-format
+.editorconfig
+.env
+.ufbt
+.cache
+*.fam
+compile_commands.json
+c_cpp_properties.json
+.github
