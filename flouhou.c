@@ -50,10 +50,10 @@ typedef struct {
 } Position;
 
 typedef struct {
-    uint8_t x;
-    uint8_t y;
-    uint8_t w;
-    uint8_t h;
+    int x;
+    int y;
+    int w;
+    int h;
 } Rect;
 
 typedef enum {
@@ -462,8 +462,19 @@ void do_tick(
         EnemyPew* epew = &game_state->enemy_pews.items[i];
         epew->x += epew->h_speed;
         epew->y += epew->v_speed;
-        if (epew->x < 0 - ENEMY_PEW_WIDTH || epew->y < 0 - ENEMY_PEW_HEIGHT || epew->x > 128 ||
-           epew->y > 64) {
+        Rect enemy_hitbox = {
+            .x = epew->x,
+            .y = epew->y,
+            .w = ENEMY_PEW_WIDTH,
+            .h = ENEMY_PEW_HEIGHT,
+        };
+        Rect screen_hitbox = {
+            .x = 0,
+            .y = 0,
+            .w = 128,
+            .h = 64,
+        };
+        if (!check_collision(enemy_hitbox, screen_hitbox)) {
             enemypew_remove(&game_state->enemy_pews, i);
         }
     }
