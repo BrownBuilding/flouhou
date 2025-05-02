@@ -140,8 +140,8 @@ Position calculate_bad_position(float ticks) {
     float x = sin((double)0.1 * ticks_double);
     float y = sin((double)0.075982851 * ticks_double);
     return (Position){
-        .x = map(-1.0, 1.0, 64, 128 - 16, x),
-        .y = map(-1.0, 1.0, 0, 64 - 16, y),
+        .x = map(-1.0, 1.0, 64, 128 - ENEMY_WIDTH, x),
+        .y = map(-1.0, 1.0, 0, 64 - ENEMY_HEIGHT, y),
     };
 }
 
