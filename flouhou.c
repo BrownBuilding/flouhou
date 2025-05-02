@@ -11,7 +11,6 @@
 #include <furi.h>
 #include <math.h>
 #include <gui/gui.h>
-#include <notification/notification.h>
 
 #include <flouhou_icons.h>
 
