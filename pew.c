@@ -1,6 +1,5 @@
 #include "pew.h"
 #include <core/check.h>
-#include <stdlib.h>
 
 void pew_add(Pews* pews, const Pew pew) {
     furi_assert(pews->len == PEW_CAP, "cannot add to full pews");
@@ -16,7 +15,7 @@ void pew_remove(Pews* pews, const int index) {
     pews->len--;
 }
 
-void enemypews_add(EnemyPews* enemy_pews, EnemyPew enemey_pew) {
+void enemypews_add(Enemy_Pews* enemy_pews, EnemyPew enemey_pew) {
     (void)enemy_pews;
     (void)enemey_pew;
     if (enemy_pews->len + 1 != ENEMY_PEW_CAP) {
@@ -24,7 +23,7 @@ void enemypews_add(EnemyPews* enemy_pews, EnemyPew enemey_pew) {
     }
 }
 
-void enemypew_remove(EnemyPews* enemypews, int index) {
+void enemypew_remove(Enemy_Pews* enemypews, int index) {
     (void)enemypews;
     (void)index;
     for (int i = index; i < enemypews->len - 1; i++) {

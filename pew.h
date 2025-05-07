@@ -24,14 +24,14 @@ typedef struct {
 typedef struct {
     int len;
     EnemyPew items[ENEMY_PEW_CAP];
-} EnemyPews;
+} Enemy_Pews;
 
 void pew_add(Pews* pews, Pew pew);
 
 void pew_remove(Pews* pews, int idx);
 
-void enemypews_add(EnemyPews* enemypews, EnemyPew enemey_pew);
+void enemypews_add(Enemy_Pews* enemypews, EnemyPew enemey_pew);
 
-void enemypew_remove(EnemyPews* enemypews, int idx);
+void enemypew_remove(Enemy_Pews* enemypews, int idx);
 
 #endif

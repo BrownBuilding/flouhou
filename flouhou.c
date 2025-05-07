@@ -58,7 +58,7 @@ typedef struct {
 typedef enum {
     FOU_QUEUEEVENTKIND_TICK,
     FOU_QUEUEEVENTKIND_INPUT,
-} FouQueueEventKind;
+} Fou_Queue_Event_Kind;
 
 typedef enum {
     FOU_USERINPUT_UP,
@@ -67,23 +67,24 @@ typedef enum {
     FOU_USERINPUT_RIGHT,
     FOU_USERINPUT_BACK,
     FOU_USERINPUT_SHOOT,
-} UserInput;
+} User_Input;
 
 typedef struct {
-} FouQueueEventTick;
+} Fou_Queue_Event_Tick;
+
 
 typedef struct {
-    UserInput user_input;
+    User_Input user_input;
     bool pressed; // true on press, false on release
-} FouQueueEventInput;
+} Fou_Queue_Event_Input;
 
 typedef struct {
-    FouQueueEventKind kind;
+    Fou_Queue_Event_Kind kind;
     union {
-        FouQueueEventInput input;
-        FouQueueEventTick tick;
+        Fou_Queue_Event_Input input;
+        Fou_Queue_Event_Tick tick;
     };
-} FouQueueEvent;
+} Fou_Queue_Event;
 
 typedef struct {
     int lifes_left;
@@ -105,12 +106,12 @@ typedef struct { // position of enemy is a function of time, so it's not stored.
 typedef struct {
     int ticks;
     Pews pews;
-    EnemyPews enemy_pews;
+    Enemy_Pews enemy_pews;
     Player player;
     Enemy enemy;
     bool paused;
     bool should_quit; // Communicate to event loop that the game should close
-} GameState;
+} Game_State;
 
 // typedef struct {
 //     GameState game_state;
@@ -124,7 +125,7 @@ typedef struct {
     bool right;
     bool shoot;
     bool back;
-} UserInputState;
+} User_Input_State;
 
 float map(float src_min, float src_max, float dst_min, float dst_max, float x) {
     float src_range = src_max - src_min;
@@ -192,7 +193,7 @@ void draw_outlined_icon(Canvas* canvas, int8_t x, int8_t y, const Icon* icon) {
     canvas_draw_icon(canvas, x, y, icon);
 }
 
-void draw_enemy(Canvas* canvas, const GameState* game_state) {
+void draw_enemy(Canvas* canvas, const Game_State* game_state) {
     Position p = calculate_bad_position(game_state->ticks);
     uint8_t x = p.x;
     uint8_t y = p.y;
@@ -219,7 +220,7 @@ void draw_enemy(Canvas* canvas, const GameState* game_state) {
     }
 }
 
-void draw_player_death(Canvas* canvas, const GameState* game_state, int ticks_sice_death) {
+void draw_player_death(Canvas* canvas, const Game_State* game_state, int ticks_sice_death) {
     // draw explosion
     canvas_set_color(canvas, ColorWhite);
     if (ticks_sice_death == 0) {
@@ -258,8 +259,8 @@ bool check_collision(Rect a, Rect b) {
     return (a.x + a.w) > b.x && a.x < (b.x + b.w) && (a.y + a.h) > b.y && a.y < (b.y + b.h);
 }
 
-GameState init_game_state() {
-    return (GameState){
+Game_State init_game_state() {
+    return (Game_State){
         .ticks = 0,
         .pews = {0},
         .enemy =
@@ -283,7 +284,7 @@ GameState init_game_state() {
 }
 
 static void my_draw_callback(Canvas* canvas, void* context) {
-    const GameState* game_state = context;
+    const Game_State* game_state = context;
     if (canvas == NULL) {
         return;
     }
@@ -345,7 +346,7 @@ static void my_input_callback(InputEvent* inputevent, void* context) {
     if (inputevent == NULL) {
         return;
     }
-    FouQueueEventInput event_input = {0};
+    Fou_Queue_Event_Input event_input = {0};
     if (inputevent->type == InputTypeRelease) {
         event_input.pressed = false;
     } else {
@@ -376,25 +377,25 @@ static void my_input_callback(InputEvent* inputevent, void* context) {
     } break;
     };
     if (!no_input) {
-        FouQueueEvent event = {.kind = FOU_QUEUEEVENTKIND_INPUT, .input = event_input};
+        Fou_Queue_Event event = {.kind = FOU_QUEUEEVENTKIND_INPUT, .input = event_input};
         furi_message_queue_put(*queue, &event, FuriWaitForever);
     }
 }
 
 static void my_timer_callback(void* context) {
     FuriMessageQueue** msg_queue = context;
-    FouQueueEvent event = {
+    Fou_Queue_Event event = {
         .kind = FOU_QUEUEEVENTKIND_TICK,
-        .tick = (FouQueueEventTick){},
+        .tick = (Fou_Queue_Event_Tick){},
     };
     furi_message_queue_put(*msg_queue, &event, FuriWaitForever);
 };
 
 
 void do_tick(
-    GameState* game_state,
-    UserInputState current_frame_input,
-    UserInputState prev_frame_input)
+    Game_State* game_state,
+    User_Input_State current_frame_input,
+    User_Input_State prev_frame_input)
 {
     (void)prev_frame_input;
 
@@ -576,11 +577,11 @@ int32_t flouhou_app(void* p) {
 
     // I think the game state struct is too big for the stack so now it lives on
     // the head.
-    GameState* game_state = malloc(sizeof(GameState));
+    Game_State* game_state = malloc(sizeof(Game_State));
     assert(game_state);
     *game_state = init_game_state();
 
-    FuriMessageQueue* queue = furi_message_queue_alloc(16, sizeof(FouQueueEvent));
+    FuriMessageQueue* queue = furi_message_queue_alloc(16, sizeof(Fou_Queue_Event));
     ViewPort* my_view_port = view_port_alloc();
 
     FuriTimer* timer = furi_timer_alloc(my_timer_callback, FuriTimerTypePeriodic, (void*)&queue);
@@ -594,11 +595,11 @@ int32_t flouhou_app(void* p) {
     Gui* gui = furi_record_open(RECORD_GUI);
     gui_add_view_port(gui, my_view_port, GuiLayerFullscreen);
 
-    UserInputState current_frame_input = {0};
-    UserInputState previous_frame_input = {0};
-    UserInputState released_keys = {0};
+    User_Input_State current_frame_input = {0};
+    User_Input_State previous_frame_input = {0};
+    User_Input_State released_keys = {0};
 
-    FouQueueEvent event;
+    Fou_Queue_Event event;
     bool should_quit = false;
     while(!should_quit) {
         FuriStatus status = furi_message_queue_get(queue, &event, FuriWaitForever);
@@ -619,7 +620,7 @@ int32_t flouhou_app(void* p) {
             if (released_keys.right) current_frame_input.right = false;
             if (released_keys.back) current_frame_input.back = false;
             if (released_keys.shoot) current_frame_input.shoot = false;
-            released_keys = (UserInputState){0};
+            released_keys = (User_Input_State){0};
             // current_frame_input = (UserInputState){0};
             view_port_update(my_view_port);
         } break;
