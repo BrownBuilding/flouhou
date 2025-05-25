@@ -115,9 +115,9 @@ void draw_enemy(const Game_State* game_state) {
     fou_invert_color();
     // make enemy laugh when player died
     if (game_state->player.lifes_left == 0) {
-        fou_draw_icon(x, y, game_state->ticks % 16 > 8 ? FOU_ICON_BADLAUGH1 : FOU_ICON_BADLAUGH1);
+        fou_draw_icon(x, y, game_state->ticks % 16 > 8 ? FOU_ICON_BADLAUGH0 : FOU_ICON_BADLAUGH1);
     } else {
-        fou_draw_icon(x, y, game_state->ticks % 48 > 24 ? FOU_ICON_BAD1 : FOU_ICON_BAD1);
+        fou_draw_icon(x, y, game_state->ticks % 48 > 24 ? FOU_ICON_BAD0 : FOU_ICON_BAD1);
     }
     fou_invert_color();
     if (invert_color_for_flicker_animation) {

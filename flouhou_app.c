@@ -186,7 +186,9 @@ void fou_set_color(bool color) {
 const Icon* icon_enum_to_actual_icon(Fou_Icon icon) {
     switch (icon) {
         case FOU_ICON_BADFILL: return &I_BadFill_16x16;
+        case FOU_ICON_BADLAUGH0: return &I_BadLaugh0_16x16;
         case FOU_ICON_BADLAUGH1: return &I_BadLaugh1_16x16;
+        case FOU_ICON_BAD0: return &I_Bad0_16x16;
         case FOU_ICON_BAD1: return &I_Bad1_16x16;
         case FOU_ICON_SHOT: return &I_Shot_8x8;
         case FOU_ICON_SPACESHIP: return &I_SpaceShip_8x8;

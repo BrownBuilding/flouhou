@@ -61,7 +61,9 @@ typedef struct {
 
 typedef enum {
     FOU_ICON_BADFILL,
+    FOU_ICON_BADLAUGH0,
     FOU_ICON_BADLAUGH1,
+    FOU_ICON_BAD0,
     FOU_ICON_BAD1,
     FOU_ICON_SHOT,
     FOU_ICON_SPACESHIP,
