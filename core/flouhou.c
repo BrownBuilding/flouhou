@@ -212,6 +212,7 @@ void fou_frame(
         if (current_frame_input.shoot) {
             game_state->paused = false;
         }
+        draw_pause_screen();
         return;
     }
 
@@ -377,15 +378,11 @@ void fou_frame(
     }
     game_state->ticks++;
 
-
     fou_set_bitmap_mode(true);
     fou_draw_box(0, 0, 128, 64);
     fou_invert_color();
     draw_stars(game_state->ticks);
-    if (game_state->paused) {
-        draw_pause_screen();
-        return;
-    }
+
     // draw shots
     for(int i = 0; i < game_state->pews.len; i++) {
         Pew pew = game_state->pews.items[i];
