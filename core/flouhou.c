@@ -28,8 +28,8 @@
 #define MOVEMENT_SPEED 0.5
 #define SHOOT_COOLDOWN 8
 
-#define ColorWhite 1
-#define ColorBlack 0
+#define ColorWhite 0
+#define ColorBlack 1
 
 // TODO: Imporve death animation (explosion)
 // TODO: Game over screen that is skippable by input
