@@ -102,7 +102,7 @@ size_t push_draw_string(const char* string) {
     furi_check(draw_strings.items != NULL);
 
     memcpy(draw_strings.items + draw_strings.size, string, len - 1);
-    draw_strings.items[draw_strings.size + len] = 0;
+    draw_strings.items[draw_strings.size + len - 1] = 0;
     draw_strings.size += len;
 
     return start_of_string;
