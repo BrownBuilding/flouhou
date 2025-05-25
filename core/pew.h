@@ -2,7 +2,7 @@
 #define PEW_H
 
 #define PEW_CAP 32
-#define ENEMY_PEW_CAP 64
+#define ENEMY_PEW_CAP 32
 
 typedef struct {
     float x;
