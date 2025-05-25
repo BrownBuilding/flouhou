@@ -271,9 +271,6 @@ static void my_draw_callback(Canvas* canvas, void* context) {
         }
     }
 
-    draw_calls.size = 0;
-    draw_strings.size = 0;
-
     furi_check(
         furi_mutex_release(draw_call_mutex) == FuriStatusOk,
         "could not release mutex"
